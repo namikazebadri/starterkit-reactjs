@@ -12,7 +12,7 @@ COPY . $REACTJS_HOME
 RUN npm install -g serve
 
 RUN npm install
-RUN npm build
+RUN npm run build
 
 EXPOSE 3000
 
