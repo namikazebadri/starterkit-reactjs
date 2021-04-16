@@ -1,0 +1,50 @@
+name: Deploy to Dockerhub
+
+on:
+  push:
+    tags:
+      - 'dockerhub-v*'
+
+jobs:
+  Release:
+    name: Release
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+
+    # Getting tag name for docker image and full tag name.
+    - name: Get tag version
+      id: branch_name
+      run: |
+        echo ::set-output name=SOURCE_TAG_DOCKER_IMAGE::${GITHUB_REF#refs/tags/dockerhub-v}
+        echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
+    # Login to Docker
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    # Build and push docker image to Dockerhub
+    - name: Build and push
+      id: docker_build
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: namikazebadri/reactjs-app:${{ steps.branch_name.outputs.SOURCE_TAG_DOCKER_IMAGE }}
+
+    # Outputting image digest from push
+    - name: Image digest
+      run: echo ${{ steps.docker_build.outputs.digest }}
+
+    # Notify engineers via slack
+    - name: Notify slack
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_OPEN_SOURCE }}
+        SLACK_USERNAME: "Open Source Activities"
+        SLACK_TITLE: "New Version Release!"
+        SLACK_MESSAGE: "\n\n === ${{ github.repository }} (${{ steps.branch_name.outputs.SOURCE_TAG }}) ==="
+        SLACK_FOOTER: "Powered by Element Creative Studio"
+        SLACK_ICON: "https://cdn.elementcreativestudio.com/github.png"
